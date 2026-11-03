@@ -6,10 +6,11 @@
 |---|---|---|---|
 | 1 | Header top bar CSS loaded after first paint | Load it in `<head>` and preload the brand fonts | CLS 0.86 – 0.90 → **0** |
 | 2 | Critical CSS generation failing | Absolute stylesheet URLs, then regenerate | Status **optimised** |
-| 3 | ~50 render-blocking stylesheets | Hummingbird Combine + critical CSS working | **0** on inner pages |
+| 3 | ~50 render-blocking stylesheets | Critical CSS inlined, remaining stylesheets deferred | **0** on inner pages |
 | 4 | 1-hour page-cache lifetime | 24-hour lifetime | More visits served from cache (0.34 s TTFB) |
 | 5 | Stylesheets loaded where unused | FA4 shim off; Instagram CSS only on feed pages | 4 – 5 fewer requests |
 | 6 | Delayed JavaScript holding back the Elementor hero | Elementor core scripts excluded from Delay JS | Hero renders on load, TBT stays 0 ms |
+| 7 | Menu plugin (MLR) rendering | MLR scripts excluded from Delay JS; assets minified individually | Location finder and menus render correctly |
 
 ## 1. Layout shift from the header top bar
 
@@ -34,12 +35,12 @@ Hummingbird generates critical CSS on WPMU DEV's servers. It could not resolve r
 
 ## 3. Render-blocking CSS
 
-Pages loaded ~50 separate stylesheets: Elementor, per-widget and per-template files, JetEngine, popups, filters and more. With Combine and critical CSS working, inner pages now inline their above-the-fold CSS and load the rest without blocking the first paint.
+Pages loaded ~50 separate stylesheets: Elementor, per-widget and per-template files, JetEngine, popups, filters and more. With critical CSS working, inner pages now inline their above-the-fold CSS and load the rest without blocking the first paint. Every stylesheet is served minified.
 
-| Page | Stylesheet links | Render-blocking |
-|---|---|---|
-| Offers & promotions | 48 → **18** | ~40 → **0** |
-| Menu — Antigonish | 52 → **21** | ~42 → **0** |
+| Page | Render-blocking stylesheets |
+|---|---|
+| Offers & promotions | ~40 → **0** |
+| Menu — Antigonish | ~42 → **0** |
 
 ## 4. Page cache
 
@@ -53,3 +54,7 @@ The host's static cache serves a page in **0.34 s** versus ~1 s for a PHP render
 ## 6. Delayed JavaScript and Elementor
 
 Hummingbird's Delay JavaScript held Elementor's frontend scripts until the visitor interacted, so first-time visitors on the home page could see the slideshow area before it initialised. I excluded the scripts Elementor needs to start (webpack runtime, frontend, frontend modules, Pro handlers, jQuery, Swiper, sticky, SmartMenus and `wp-hooks` / `wp-i18n`). Everything else stays delayed. The hero now renders on load, and Total Blocking Time is still **0 ms**.
+
+## 7. Menu plugin compatibility
+
+The location finder and menu navigation come from the in-house MLR Menu Core plugin. Its scripts (`mlr-front`, `mlr-gate`) are now excluded from Delay JavaScript, together with `jquery-ui-core` and `jquery-numerator`, so the finder and menus work on first load. Hummingbird serves each stylesheet and script minified as an individual file instead of combining them, which keeps the plugin's styles in their intended order. Total Blocking Time stays at **0–20 ms**.
