@@ -6,10 +6,10 @@
 |---|---|---|---|
 | 1 | Header top bar CSS loaded after first paint | Load it in `<head>` and preload the brand fonts | CLS 0.86 – 0.90 → **0** |
 | 2 | Critical CSS generation failing | Absolute stylesheet URLs, then regenerate | Status **optimised** |
-| 3 | ~50 stylesheets competing for the first paint | Critical CSS on standard pages; full CSS up front on archives and menus | **Styled first paint** on every template |
+| 3 | ~50 stylesheets competing for the first paint | Full CSS up front on pages, archives and menus; critical CSS plus async loading on blog posts | **Styled first paint** on every template |
 | 4 | 1-hour page-cache lifetime | 24-hour lifetime with homepage preload | More visits served from cache (TTFB 0.5 s for real users) |
 | 5 | Stylesheets loaded where unused | FA4 shim off; Instagram CSS only on feed pages | 4 – 5 fewer requests |
-| 6 | Delayed JavaScript holding back the interface | Elementor, JetEngine, JetPopup, Smart Filters, Happy Addons and MLR scripts excluded from Delay JS | Hero, popups, filters and menus work on load · **INP 78 ms** |
+| 6 | Delayed JavaScript holding back the interface | Interface plugins excluded from Delay JS as whole plugins | Hero, popups, filters and menus work on load · **INP 78 ms** |
 | 7 | Menu plugin (MLR) rendering | MLR excluded from critical CSS and Delay JS; assets minified individually | Location finder and menus render correctly |
 | 8 | Assets served from the origin server | WPMU DEV CDN enabled | CSS and JavaScript delivered from edge servers |
 
@@ -40,11 +40,11 @@ Pages load ~50 separate stylesheets: Elementor, per-widget and per-template file
 
 | Template | Strategy | First paint |
 |---|---|---|
-| Standard pages (About, Stories…) | Critical CSS inlined, remaining stylesheets loaded after first paint | **Styled** |
+| Pages (Home, About, Stories…) | Full stylesheets loaded up front | **Styled** |
 | Archives (Offers) and MLR menus | Full stylesheets loaded up front | **Styled** |
-| Home | Full stylesheets loaded up front | **Styled** |
+| Blog posts | Critical CSS inlined, remaining stylesheets loaded asynchronously | **Styled** |
 
-Archives and menus build their layout from JetEngine listings and the MLR plugin, which a generic critical-CSS extract cannot capture reliably. Loading their full CSS up front guarantees a correct first paint on every template.
+Pages, archives and menus are built from Elementor templates, JetEngine listings and the MLR plugin, which a generic critical-CSS extract cannot capture reliably. Loading their full CSS up front guarantees a correct first paint on every template; the stylesheets themselves are minified and served from the CDN. Blog posts have a simple, predictable layout, so they keep critical CSS.
 
 ## 4. Page cache
 
@@ -57,15 +57,15 @@ The host's static cache serves cached pages without touching PHP. Raising the li
 
 ## 6. Delayed JavaScript and plugin compatibility
 
-Hummingbird's Delay JavaScript holds scripts until the visitor interacts. Applied to everything, it stopped Elementor sliders, JetPopup popups, Smart Filters and the menu plugin from initialising on load. I excluded the scripts the interface depends on and their libraries:
+Hummingbird's Delay JavaScript holds scripts until the visitor interacts. Applied to everything, it stopped Elementor sliders, JetPopup popups, Smart Filters and the menu plugin from initialising on load. I excluded the plugins that drive the interface **as whole plugins**, so any script they add in a future update is covered automatically:
 
-- **Elementor and Elementor Pro:** webpack runtime, frontend, frontend modules, Pro handlers, sticky, SmartMenus, Swiper, `wp-hooks` / `wp-i18n`
-- **JetEngine family:** JetEngine frontend and its JetPopup / Smart Filters compatibility modules, JetPopup, JetSmartFilters, Jet Plugins
-- **Happy Addons:** core and Pro scripts, plus their slick and DOMPurify libraries
-- **MLR Menu Core:** `mlr-front`, `mlr-gate`
-- **Shared libraries:** jQuery, jQuery Migrate, jQuery UI core and datepicker, imagesLoaded, jquery-numerator
+- **Page builder and theme:** Elementor, Elementor Pro, the active Hello Elementor child theme
+- **Add-ons:** Happy Addons and Happy Addons Pro
+- **JetEngine family:** JetEngine, JetPopup, JetSmartFilters, JetGridBuilder
+- **MLR Menu Core**
+- **Languages:** Polylang and Connect Polylang for Elementor
 
-Inline scripts are also excluded, so configuration printed by these plugins is available when their files run. Third-party and non-essential scripts stay delayed. Every interactive element now works on first load, and real visitors record an Interaction to Next Paint of **78 ms**.
+Shared libraries they rely on (jQuery, jQuery Migrate, jQuery UI, imagesLoaded, `wp-hooks` / `wp-i18n`) are excluded by file, and inline scripts are never delayed, so the configuration these plugins print is available when their files run. Only third-party and non-essential scripts stay delayed: the cookie banner, Google Analytics, the Instagram feed and two small helpers. Every interactive element works on first load, and real visitors record an Interaction to Next Paint of **78 ms**.
 
 ## 7. Menu plugin compatibility
 
