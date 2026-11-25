@@ -6,11 +6,12 @@
 |---|---|---|---|
 | 1 | Header top bar CSS loaded after first paint | Load it in `<head>` and preload the brand fonts | CLS 0.86 – 0.90 → **0** |
 | 2 | Critical CSS generation failing | Absolute stylesheet URLs, then regenerate | Status **optimised** |
-| 3 | ~50 render-blocking stylesheets | Critical CSS inlined, remaining stylesheets deferred | **0** on inner pages |
-| 4 | 1-hour page-cache lifetime | 24-hour lifetime | More visits served from cache (0.34 s TTFB) |
+| 3 | ~50 stylesheets competing for the first paint | Critical CSS on standard pages; full CSS up front on archives and menus | **Styled first paint** on every template |
+| 4 | 1-hour page-cache lifetime | 24-hour lifetime with homepage preload | More visits served from cache (TTFB 0.5 s for real users) |
 | 5 | Stylesheets loaded where unused | FA4 shim off; Instagram CSS only on feed pages | 4 – 5 fewer requests |
-| 6 | Delayed JavaScript holding back the Elementor hero | Elementor core scripts excluded from Delay JS | Hero renders on load, TBT stays 0 ms |
-| 7 | Menu plugin (MLR) rendering | MLR scripts excluded from Delay JS; assets minified individually | Location finder and menus render correctly |
+| 6 | Delayed JavaScript holding back the interface | Elementor, JetEngine, JetPopup, Smart Filters, Happy Addons and MLR scripts excluded from Delay JS | Hero, popups, filters and menus work on load · **INP 78 ms** |
+| 7 | Menu plugin (MLR) rendering | MLR excluded from critical CSS and Delay JS; assets minified individually | Location finder and menus render correctly |
+| 8 | Assets served from the origin server | WPMU DEV CDN enabled | CSS and JavaScript delivered from edge servers |
 
 ## 1. Layout shift from the header top bar
 
@@ -33,28 +34,43 @@ The font preloads remove a smaller secondary shift caused by the fallback-to-web
 
 Hummingbird generates critical CSS on WPMU DEV's servers. It could not resolve root-relative stylesheet URLs (`/wp-content/...`) and stopped the whole job with `File not found`. Switching the snippet to absolute URLs fixed it, and generation now completes.
 
-## 3. Render-blocking CSS
+## 3. Stylesheet loading
 
-Pages loaded ~50 separate stylesheets: Elementor, per-widget and per-template files, JetEngine, popups, filters and more. With critical CSS working, inner pages now inline their above-the-fold CSS and load the rest without blocking the first paint. Every stylesheet is served minified.
+Pages load ~50 separate stylesheets: Elementor, per-widget and per-template files, JetEngine, popups, filters and more. Each template now gets the strategy that suits it:
 
-| Page | Render-blocking stylesheets |
-|---|---|
-| Offers & promotions | ~40 → **0** |
-| Menu — Antigonish | ~42 → **0** |
+| Template | Strategy | First paint |
+|---|---|---|
+| Standard pages (About, Stories…) | Critical CSS inlined, remaining stylesheets loaded after first paint | **Styled** |
+| Archives (Offers) and MLR menus | Full stylesheets loaded up front | **Styled** |
+| Home | Full stylesheets loaded up front | **Styled** |
+
+Archives and menus build their layout from JetEngine listings and the MLR plugin, which a generic critical-CSS extract cannot capture reliably. Loading their full CSS up front guarantees a correct first paint on every template.
 
 ## 4. Page cache
 
-The host's static cache serves a page in **0.34 s** versus ~1 s for a PHP render. Raising the lifetime from 1 to **24 hours** keeps the ~1,200 low-traffic location pages cached between visits. Content edits still purge the affected pages automatically.
+The host's static cache serves cached pages without touching PHP. Raising the lifetime from 1 to **24 hours** keeps the ~1,200 low-traffic location pages cached between visits, and the homepage plus any updated page are preloaded automatically. Real visitors see a **0.5 s** Time to First Byte.
 
 ## 5. Unused stylesheets
 
 - **Font Awesome 4 shim off** (Elementor → Settings → Advanced). Icons render as inline SVG, so nothing depends on it.
 - **Instagram CSS only on feed pages** (Instagram Feed → Settings → Advanced). The feed appears only on the home page, About Us and the French home page.
 
-## 6. Delayed JavaScript and Elementor
+## 6. Delayed JavaScript and plugin compatibility
 
-Hummingbird's Delay JavaScript held Elementor's frontend scripts until the visitor interacted, so first-time visitors on the home page could see the slideshow area before it initialised. I excluded the scripts Elementor needs to start (webpack runtime, frontend, frontend modules, Pro handlers, jQuery, Swiper, sticky, SmartMenus and `wp-hooks` / `wp-i18n`). Everything else stays delayed. The hero now renders on load, and Total Blocking Time is still **0 ms**.
+Hummingbird's Delay JavaScript holds scripts until the visitor interacts. Applied to everything, it stopped Elementor sliders, JetPopup popups, Smart Filters and the menu plugin from initialising on load. I excluded the scripts the interface depends on and their libraries:
+
+- **Elementor and Elementor Pro:** webpack runtime, frontend, frontend modules, Pro handlers, sticky, SmartMenus, Swiper, `wp-hooks` / `wp-i18n`
+- **JetEngine family:** JetEngine frontend and its JetPopup / Smart Filters compatibility modules, JetPopup, JetSmartFilters, Jet Plugins
+- **Happy Addons:** core and Pro scripts, plus their slick and DOMPurify libraries
+- **MLR Menu Core:** `mlr-front`, `mlr-gate`
+- **Shared libraries:** jQuery, jQuery Migrate, jQuery UI core and datepicker, imagesLoaded, jquery-numerator
+
+Inline scripts are also excluded, so configuration printed by these plugins is available when their files run. Third-party and non-essential scripts stay delayed. Every interactive element now works on first load, and real visitors record an Interaction to Next Paint of **78 ms**.
 
 ## 7. Menu plugin compatibility
 
-The location finder and menu navigation come from the in-house MLR Menu Core plugin. Its scripts (`mlr-front`, `mlr-gate`) are now excluded from Delay JavaScript, together with `jquery-ui-core` and `jquery-numerator`, so the finder and menus work on first load. Hummingbird serves each stylesheet and script minified as an individual file instead of combining them, which keeps the plugin's styles in their intended order. Total Blocking Time stays at **0–20 ms**.
+The location finder and menu navigation come from the in-house MLR Menu Core plugin. Its scripts run on load (section 6), its templates and menu items are excluded from critical CSS (section 3), and Hummingbird serves every stylesheet and script minified as an individual file instead of combining them, which keeps the plugin's styles in their intended order.
+
+## 8. CDN
+
+I enabled the WPMU DEV CDN from Hummingbird. Minified CSS and JavaScript are now served from edge servers (`*.assetcdn.net`) close to each visitor instead of from the origin in Toronto, which shortens download times across Atlantic Canada and Ontario.

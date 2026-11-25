@@ -4,26 +4,26 @@
 
 <div class="band">
   <div><b>Property</b><span>www.pizzadelight.com</span></div>
-  <div><b>Window</b><span>Oct 22 – Nov 3, 2026</span></div>
+  <div><b>Window</b><span>Oct 22 – Nov 25, 2026</span></div>
   <div><b>Stack</b><span>WordPress · Elementor Pro · Polylang · JetEngine</span></div>
-  <div><b>Hosting</b><span>WPMU DEV · Static Server Cache · Hummingbird Pro</span></div>
+  <div><b>Hosting</b><span>WPMU DEV · Static Server Cache · Hummingbird Pro · CDN</span></div>
 </div>
 
 ## Overview
 
-This cycle focused on front-end performance and site health. I removed a site-wide layout shift, got Hummingbird's critical CSS working, made sure delayed JavaScript no longer holds back the Elementor hero or the menu plugin, extended the page-cache lifetime and trimmed unnecessary stylesheets. Desktop pages now score **90–100 on PageSpeed**, the offers archive reaches **100 / 96** (desktop / mobile), and the home page scores **88% on GTmetrix**, with **zero layout shift** on every page tested. The security scan is clean.
+This cycle focused on front-end performance and site health. I removed a site-wide layout shift, extended the page-cache lifetime, trimmed unnecessary stylesheets and then tuned Hummingbird into a configuration that is fully compatible with Elementor, the JetEngine plugins and the MLR menu plugin, with the WPMU DEV CDN serving assets. Real visitors on mobile now **pass all Core Web Vitals** across the site, desktop pages score **91–99 on PageSpeed**, and layout shift is **0** on every page tested. The security scan is clean.
 
 <div class="cards">
   <div class="card good">
-    <h5>GTmetrix · Home</h5>
-    <div class="big">88% <small>Grade B</small></div>
-    <span class="delta up">▲ Performance 64% → 88%</span>
-    <p>CLS 0 · fully loaded in 1.7 s</p>
+    <h5>Real users · Mobile</h5>
+    <div class="big">Passed <small>Core Web Vitals</small></div>
+    <span class="delta up">LCP 1.1 s · INP 78 ms · CLS 0</span>
+    <p>Site-wide, Chrome UX Report, 28 days</p>
   </div>
   <div class="card good">
     <h5>PageSpeed · Desktop</h5>
-    <div class="big">90–100</div>
-    <span class="delta up">▲ Home 73 → 90 · Offers 76 → 100</span>
+    <div class="big">91–99</div>
+    <span class="delta up">▲ Home 73 → 91 · Offers 76 → 99</span>
     <p>Home, offers and menu templates</p>
   </div>
   <div class="card good">
@@ -35,8 +35,8 @@ This cycle focused on front-end performance and site health. I removed a site-wi
   <div class="card good">
     <h5>Wordfence scan</h5>
     <div class="big">0 <small>issues</small></div>
-    <span class="delta up">21,484 files · 17,281 URLs</span>
-    <p>No malware, no vulnerable components</p>
+    <span class="delta up">23,341 files · 20,095 URLs</span>
+    <p>No malware, no open vulnerabilities</p>
   </div>
 </div>
 
@@ -44,11 +44,12 @@ This cycle focused on front-end performance and site health. I removed a site-wi
 
 | Area | Before | After |
 |---|---|---|
+| Core Web Vitals, mobile (real users) | Home LCP 5.2 s | **Passed** site-wide · LCP 1.1 s |
 | Layout shift (CLS), desktop | 0.86 – 0.90 | **0** |
-| Render-blocking CSS, inner pages | ~45 stylesheets | **0** — critical CSS inlined |
+| Styled first paint | Not on every template | **Every template** |
+| Elementor, JetEngine and MLR with optimizations on | Conflicts | **Fully working** |
+| Asset delivery | Origin server | **WPMU DEV CDN** |
 | Page-cache lifetime | 1 hour | **24 hours** |
-| Critical CSS generation | Failing | **Optimised** |
-| Home hero for visitors | Held back by delayed JS | **Renders on load** |
 | Security scan | — | **0 issues** |
 
-> PageSpeed lab scores are simulated (slow 4G, mid-range Android) and vary a few points between runs. Real-user Core Web Vitals are a 28-day rolling average, so they reflect these improvements progressively over the coming weeks.
+> PageSpeed lab scores are simulated (slow 4G, mid-range Android) and vary a few points between runs. Real-user Core Web Vitals are a 28-day rolling average and keep improving as older visits age out of the window.
